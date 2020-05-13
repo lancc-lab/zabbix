@@ -1,0 +1,62 @@
+---
+
+- name: установка пакетов для zabbix сервера
+  hosts: zabbix_server
+  become: yes
+
+  tasks:
+  - name: Run the equivalent of "apt-get update" as a separate step
+    apt:
+      update_cache: yes
+
+  - name: Ensure docker  package is present
+    apt:
+      name: docker.io
+      state: present
+
+  - name: Ensure pip  package is present
+    apt:
+      name: python-pip
+      state: present
+
+  - name: pip package
+    shell: pip install docker
+
+  - name: Create a zabbix container
+    docker_container:
+      name: zabbix
+      image: zabbix/zabbix-appliance:ubuntu-4.0-latest
+      state: started
+      ports:
+       - "10051:10051"
+       - "10052:10052"
+       - "80:80"
+
+- name: установка пакетов для prod сервера
+  hosts: tomcat
+  become: yes
+
+  tasks:
+  - name: Run the equivalent of "apt-get update" as a separate step
+    apt:
+      update_cache: yes
+
+  - name: Ensure zabbix_agent package is present
+    apt:
+      name: zabbix-agent
+      state: present
+
+  - name: Ensure tomcat  package is present
+    apt:
+      name: tomcat9
+      state: present
+
+  - name: Копируем с ansible на tomcat
+    copy:
+      src: /home/zabbix/zabbix_agentd.conf
+      dest: /etc/zabbix/zabbix_agentd.conf
+  
+  - name: Restart zabbix_agent
+    service:
+      name: zabbix-agent
+      state: restarted
